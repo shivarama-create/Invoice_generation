@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zipcushions Invoice Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            color: #1a202c;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl text-center">
+        
+        <div class="flex flex-col items-center mb-6">
+            <img src="{{ url_for('static', filename='images/zipcushions_logo.png') }}" alt="Zipcushions Logo" class="w-24 h-24 mb-4 rounded-full shadow-lg">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Invoice Generator</h1>
+            <p class="text-lg text-gray-600">Upload your invoice data to generate professional PDFs.</p>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            <label class="block">
+                <span class="sr-only">Choose a file</span>
+                <input type="file" name="file" class="block w-full text-sm text-gray-500
+                    file:mr-4 file:py-3 file:px-6
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100
+                    transition-colors duration-200">
+            </label>
+            <button type="submit" class="w-full px-6 py-3 rounded-full font-bold text-lg
+                bg-blue-600 text-white hover:bg-blue-700
+                transition-colors duration-200 shadow-md
+                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                Generate Invoices
+            </button>
+        </form>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="mt-6">
+                    {% for message in messages %}
+                        <div class="bg-red-100 text-red-700 p-3 rounded-lg text-sm mb-2 shadow-sm" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% if files %}
+            <div class="mt-8 pt-6 border-t border-gray-200 text-left">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold text-gray-700">Generated Invoices</h2>
+                    {% if has_zip %}
+                    <a href="{{ url_for('download_child_invoices_zip') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Download All Invoices (ZIP)
+                    </a>
+                    {% endif %}
+                </div>
+                <ul class="space-y-3">
+                    {% for filename in files %}
+                    <li class="bg-gray-50 p-4 rounded-lg shadow-sm flex items-center justify-between">
+                        <span class="text-gray-800 font-medium">{{ filename }}</span>
+                        <a href="{{ url_for('serve_invoice', filename=filename) }}" class="text-blue-500 hover:text-blue-700 font-semibold transition-colors duration-200" download>
+                            Download
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+    </div>
+
+</body>
+</html>
