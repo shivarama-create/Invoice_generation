@@ -439,7 +439,9 @@ def index():
         for col in ['Invoice Number', 'Recipient_Postal code', 'Reference_1', 'House AWB No.']:
              if col in df.columns:
                  df[col] = df[col].astype(str).replace('\.0', '', regex=True)
-
+        
+        # This will hold the data to display in the table
+        invoice_list_data = []
         generated_files = []
         child_invoice_files = []
         
@@ -448,18 +450,20 @@ def index():
                 filename = generate_individual_invoice(row, app.config['GENERATED_PDFS_FOLDER'])
                 generated_files.append(filename)
                 child_invoice_files.append(filename)
+                
+                # Extract data for the table
+                invoice_list_data.append({
+                    'invoice_number': get_safe_value(row, 'Invoice Number'),
+                    'recipient_name': get_safe_value(row, 'Recipient_Contact Name'),
+                    'recipient_phone': get_safe_value(row, 'Recipient_Phone Number'),
+                    'recipient_state': get_safe_value(row, 'Recipient_State'),
+                    'download_link': url_for('serve_invoice', filename=filename)
+                })
+
             except Exception as e:
                 inv_num = get_safe_value(row, 'Invoice Number', 'Unknown')
                 flash(f"Could not generate invoice {inv_num}. Error: {e}")
 
-        if not df.empty:
-            try:
-                mother_invoice_filename = generate_mother_invoice(df, app.config['GENERATED_PDFS_FOLDER'])
-                generated_files.append(mother_invoice_filename)
-            except Exception as e:
-                flash(f"Could not generate mother invoice. Error: {e}")
-
-        # Create zip file of child invoices
         zip_filename = None
         if child_invoice_files:
             try:
@@ -467,11 +471,24 @@ def index():
                 generated_files.append(zip_filename)
             except Exception as e:
                 flash(f"Could not create zip file. Error: {e}")
-
+                
+        mother_invoice_filename = None
+        if not df.empty:
+            try:
+                mother_invoice_filename = generate_mother_invoice(df, app.config['GENERATED_PDFS_FOLDER'])
+                generated_files.append(mother_invoice_filename)
+            except Exception as e:
+                flash(f"Could not generate mother invoice. Error: {e}")
+                
         # Clean up uploaded file
         os.remove(filepath)
         
-        return render_template('index.html', files=sorted(generated_files), has_zip=zip_filename is not None)
+        # Pass the extracted data to the template
+        return render_template('index.html', 
+                               files=sorted(generated_files), 
+                               has_zip=zip_filename is not None, 
+                               mother_invoice_file=mother_invoice_filename,
+                               invoice_list=invoice_list_data)
 
     return render_template('index.html', files=None, has_zip=False)
 
@@ -487,6 +504,16 @@ def download_child_invoices_zip():
         return send_file(zip_path, as_attachment=True, download_name='child_invoices.zip')
     else:
         flash('Zip file not found. Please regenerate invoices.')
+        return redirect(url_for('index'))
+        
+@app.route('/download/mother-invoice')
+def download_mother_invoice():
+    """Download the mother invoice"""
+    mother_invoice_path = os.path.join(app.config['GENERATED_PDFS_FOLDER'], 'mother_invoice.pdf')
+    if os.path.exists(mother_invoice_path):
+        return send_file(mother_invoice_path, as_attachment=True, download_name='mother_invoice.pdf')
+    else:
+        flash('Mother invoice not found. Please regenerate invoices.')
         return redirect(url_for('index'))
 
 if __name__ == '__main__':
